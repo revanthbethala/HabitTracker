@@ -44,12 +44,23 @@ public class BadgeServiceImpl implements BadgeService {
                     .id(badge.getId())
                     .name(badge.getName())
                     .description(badge.getDescription())
+                    .criteria(formatCriteria(badge.getCriteriaType(), badge.getCriteriaValue()))
                     .criteriaType(badge.getCriteriaType().name())
                     .criteriaValue(badge.getCriteriaValue())
-                    .earned(earned != null)
+                    .isEarned(earned != null)
                     .earnedAt(earned != null ? earned.getEarnedAt() : null)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    private String formatCriteria(BadgeCriteriaType type, int value) {
+        switch (type) {
+            case FIRST_CHECKIN: return "Complete your first check-in";
+            case STREAK: return "Achieve a " + value + " day streak";
+            case TOTAL_COMPLETIONS: return "Reach " + value + " total completions";
+            case ACTIVE_HABITS: return "Maintain " + value + " active habits";
+            default: return "Complete the challenge";
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.habit.service.impl;
 
 import com.habit.dto.request.CheckInRequest;
+import com.habit.dto.response.CheckInResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.entity.CheckIn;
 import com.habit.entity.Habit;
@@ -76,9 +77,17 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     @Override
-    public Page<?> getCheckInsByHabit(Long habitId, Pageable pageable) {
+    public Page<CheckInResponse> getCheckInsByHabit(Long habitId, Pageable pageable) {
         getOwnedHabit(habitId); // Access check
-        return checkInRepository.findByHabitId(habitId, pageable);
+        return checkInRepository.findByHabitId(habitId, pageable)
+                .map(checkIn -> CheckInResponse.builder()
+                        .id(checkIn.getId())
+                        .habitId(checkIn.getHabit().getId())
+                        .checkInDate(checkIn.getCheckInDate())
+                        .status(checkIn.getStatus())
+                        .value(checkIn.getValue())
+                        .note(checkIn.getNote())
+                        .build());
     }
 
     @Override

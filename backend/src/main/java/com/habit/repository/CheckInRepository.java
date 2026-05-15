@@ -15,4 +15,5 @@ public interface CheckInRepository extends JpaRepository<CheckIn, Long> {
     List<CheckIn> findByHabitId(Long habitId);
     Page<CheckIn> findByHabitId(Long habitId, Pageable pageable);
     Optional<CheckIn> findByHabitIdAndCheckInDate(Long habitId, LocalDate checkInDate);
+    List<CheckIn> findByHabitIdAndCheckInDateBetween(Long habitId, LocalDate start, LocalDate end);
 }

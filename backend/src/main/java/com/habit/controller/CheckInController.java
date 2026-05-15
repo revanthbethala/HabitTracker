@@ -2,6 +2,7 @@ package com.habit.controller;
 
 import com.habit.dto.request.CheckInRequest;
 import com.habit.dto.response.ApiResponse;
+import com.habit.dto.response.CheckInResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.service.CheckInService;
 import jakarta.validation.Valid;
@@ -27,7 +28,7 @@ public class CheckInController {
     }
 
     @GetMapping("/habits/{habitId}/check-ins")
-    public ResponseEntity<ApiResponse<Page<?>>> getCheckIns(
+    public ResponseEntity<ApiResponse<Page<CheckInResponse>>> getCheckIns(
             @PathVariable Long habitId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size) {
