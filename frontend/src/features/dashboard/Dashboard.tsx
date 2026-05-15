@@ -1,16 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDashboard } from '@/hooks/useMetrics';
 import { useCheckInMutation } from '@/hooks/useHabits';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Activity, Target, Trophy, TrendingUp, Check, X as XIcon, Minus } from 'lucide-react';
+import { Activity, Target, Trophy, TrendingUp, Check, X as XIcon, Minus, Clock } from 'lucide-react';
+import { CheckInModal } from '@/components/ui/CheckInModal';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { DashboardCharts } from './DashboardCharts';
 
 export const Dashboard: React.FC = () => {
   const { data: response, isLoading } = useDashboard();
   const checkInMutation = useCheckInMutation();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ habitId: number; status: 'DONE' | 'SKIPPED' | 'PARTIAL'; targetType: string; targetValue?: number; unit?: string } | null>(null);
+
 
   if (isLoading) {
     return (
@@ -22,12 +27,18 @@ export const Dashboard: React.FC = () => {
 
   const summary = response?.data;
 
-  const handleCheckIn = async (habitId: number, status: 'DONE' | 'SKIPPED' | 'PARTIAL') => {
+  const handleCheckIn = async (habitId: number, status: 'DONE' | 'SKIPPED' | 'PARTIAL', targetType: string, targetValue?: number, unit?: string) => {
+    if (targetType === 'COUNT') {
+      setModalConfig({ habitId, status, targetType, targetValue, unit });
+      setModalOpen(true);
+      return;
+    }
+
     try {
       await checkInMutation.mutateAsync({
         habitId,
         data: {
-          checkInDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+          date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
           status,
         }
       });
@@ -36,6 +47,23 @@ export const Dashboard: React.FC = () => {
       toast.error('Failed to save progress');
     }
   };
+
+  const handleModalSubmit = async (data: any) => {
+    if (!modalConfig) return;
+    try {
+      await checkInMutation.mutateAsync({
+        habitId: modalConfig.habitId,
+        data: {
+          date: new Date().toISOString().split('T')[0],
+          ...data
+        }
+      });
+      toast.success('Progress saved!');
+    } catch (error) {
+      toast.error('Failed to save progress');
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -80,6 +108,9 @@ export const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Analytics Section */}
+      <DashboardCharts />
 
       {/* Due Today */}
       <div className="mt-12">
@@ -129,15 +160,22 @@ export const Dashboard: React.FC = () => {
                         <span>
                           {habit.targetType === 'COUNT' ? `Target: ${habit.targetValue} ${habit.unit}` : 'Daily goal'}
                         </span>
+                        {habit.reminderTime && (
+                          <span className="flex items-center gap-1 text-amber-500 font-medium">
+                            <Clock size={14} />
+                            {habit.reminderTime}
+                          </span>
+                        )}
                       </div>
                     </div>
+
 
                     <div className="flex items-center gap-2">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         className="h-10 border-rose-500/20 text-rose-500 hover:bg-rose-500/10"
-                        onClick={() => handleCheckIn(habit.id, 'SKIPPED')}
+                        onClick={() => handleCheckIn(habit.id, 'SKIPPED', habit.targetType, habit.targetValue, habit.unit)}
                         disabled={checkInMutation.isPending}
                         title="Skip today"
                       >
@@ -147,7 +185,7 @@ export const Dashboard: React.FC = () => {
                         size="sm" 
                         variant="outline" 
                         className="h-10 border-amber-500/20 text-amber-600 hover:bg-amber-500/10"
-                        onClick={() => handleCheckIn(habit.id, 'PARTIAL')}
+                        onClick={() => handleCheckIn(habit.id, 'PARTIAL', habit.targetType, habit.targetValue, habit.unit)}
                         disabled={checkInMutation.isPending}
                         title="Partial completion"
                       >
@@ -156,13 +194,14 @@ export const Dashboard: React.FC = () => {
                       <Button 
                         size="sm" 
                         className="h-10 bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20"
-                        onClick={() => handleCheckIn(habit.id, 'DONE')}
+                        onClick={() => handleCheckIn(habit.id, 'DONE', habit.targetType, habit.targetValue, habit.unit)}
                         disabled={checkInMutation.isPending || habit.todayStatus === 'DONE'}
                       >
                         <Check size={18} className="mr-1" />
                         {habit.todayStatus === 'DONE' ? 'Completed' : 'Done'}
                       </Button>
                     </div>
+
                   </div>
                 </Card>
               </motion.div>
@@ -170,6 +209,19 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      <CheckInModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={modalConfig ? { status: modalConfig.status } : undefined}
+        isCountType={modalConfig?.targetType === 'COUNT'}
+        targetValue={modalConfig?.targetValue}
+        unit={modalConfig?.unit}
+        dateStr="Today"
+      />
     </div>
   );
 };
+
+

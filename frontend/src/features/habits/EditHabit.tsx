@@ -22,6 +22,7 @@ const habitSchema = z.object({
   scheduleType: z.enum(['DAILY', 'SPECIFIC_DAYS', 'WEEKLY_COUNT']),
   weekdays: z.array(z.string()).optional().nullable(),
   weeklyTarget: z.preprocess((val) => (val === "" || val === null || isNaN(val as number) ? undefined : Number(val)), z.number().min(1).max(7).optional()).nullable(),
+  startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
 }).refine(data => {
   if (data.targetType === 'COUNT' && !data.targetValue) return false;
@@ -55,7 +56,7 @@ export const EditHabit: React.FC = () => {
   const habit = response?.data;
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = useForm<HabitFormValues>({
-    resolver: zodResolver(habitSchema),
+    resolver: zodResolver(habitSchema) as any,
     defaultValues: {
       targetType: 'YES_NO',
       scheduleType: 'DAILY',
@@ -149,12 +150,20 @@ export const EditHabit: React.FC = () => {
                 error={errors.category?.message}
               />
             </div>
-            <Input
-                label="End Date (Optional)"
-                type="date"
-                {...register('endDate')}
-                error={errors.endDate?.message}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              <Input
+                  label="Start Date (Optional)"
+                  type="date"
+                  {...register('startDate')}
+                  error={errors.startDate?.message}
+                />
+              <Input
+                  label="End Date (Optional)"
+                  type="date"
+                  {...register('endDate')}
+                  error={errors.endDate?.message}
+                />
+            </div>
           </CardContent>
         </Card>
 

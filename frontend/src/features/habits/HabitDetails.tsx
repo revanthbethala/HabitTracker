@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useHabit, useHabitMutations, useCheckInMutation } from '@/hooks/useHabits';
+import { useHabit, useHabitMutations, useCheckInMutation, useDeleteCheckInMutation } from '@/hooks/useHabits';
 import { useExceptions, useExceptionMutations, useReminder, useReminderMutations, useCheckInHistory } from '@/hooks/useExtras';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ArrowLeft, Edit, Trash2, Calendar as CalendarIcon, TrendingUp, Activity, PauseCircle, PlayCircle, Clock, ShieldAlert, Check } from 'lucide-react';
+import { CheckInModal } from '@/components/ui/CheckInModal';
+import { ArrowLeft, Edit, Trash2, Calendar as CalendarIcon, TrendingUp, Activity, PauseCircle, PlayCircle, Clock, ShieldAlert, Check, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { HabitCharts } from '@/features/habits/HabitCharts';
 
 export const HabitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,14 +17,19 @@ export const HabitDetails: React.FC = () => {
   const habitId = parseInt(id || '0', 10);
   
   const { data: habitResponse, isLoading: isLoadingHabit } = useHabit(habitId);
-  const { deleteHabit, updateHabit } = useHabitMutations();
-  const { data: historyResponse } = useCheckInHistory(habitId);
+  const { deleteHabit, updateHabit, toggleStatus: statusMutation } = useHabitMutations();
+  const [historyPage, setHistoryPage] = useState(0);
+  const { data: historyResponse } = useCheckInHistory(habitId, historyPage);
   const { data: exceptionsResponse } = useExceptions(habitId);
   const { data: reminderResponse } = useReminder(habitId);
   
   const { addException, removeException } = useExceptionMutations(habitId);
   const { setReminder, deleteReminder } = useReminderMutations(habitId);
   const checkInMutation = useCheckInMutation();
+  const deleteCheckInMutation = useDeleteCheckInMutation();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ dateStr: string; initialData?: any } | null>(null);
 
   const [newExceptionDate, setNewExceptionDate] = useState('');
   const [newExceptionReason, setNewExceptionReason] = useState('');
@@ -38,7 +45,11 @@ export const HabitDetails: React.FC = () => {
   }
 
   const habit = habitResponse?.data;
-  const history = historyResponse?.data || [];
+  console.log("habit data:",habit);
+  
+  // Backend returns a Page object, so we need to extract the 'content' array
+  const historyData = historyResponse?.data as any;
+  const history = Array.isArray(historyData) ? historyData : historyData?.content || [];
   const exceptions = exceptionsResponse?.data || [];
   const reminder = reminderResponse?.data;
 
@@ -65,7 +76,7 @@ export const HabitDetails: React.FC = () => {
 
   const toggleStatus = async (newStatus: 'ACTIVE' | 'PAUSED' | 'ARCHIVED') => {
     try {
-      await updateHabit.mutateAsync({ id: habitId, data: { status: newStatus } as any });
+      await statusMutation.mutateAsync({ id: habitId, status: newStatus as any });
       toast.success(`Habit ${newStatus.toLowerCase()}`);
     } catch (error) {
       toast.error('Failed to update status');
@@ -76,7 +87,7 @@ export const HabitDetails: React.FC = () => {
     e.preventDefault();
     if (!newExceptionDate) return;
     try {
-      await addException.mutateAsync({ exceptionDate: newExceptionDate, reason: newExceptionReason });
+      await addException.mutateAsync({ date: newExceptionDate, reason: newExceptionReason });
       setNewExceptionDate('');
       setNewExceptionReason('');
       toast.success('Exception added');
@@ -106,17 +117,49 @@ export const HabitDetails: React.FC = () => {
     }
   };
 
+  const handleDeleteCheckIn = async (checkInId: number) => {
+    try {
+      await deleteCheckInMutation.mutateAsync({ habitId, checkInId });
+      toast.success('Check-in reset');
+    } catch (error) {
+      toast.error('Failed to reset check-in');
+    }
+  };
+
   const handlePastCheckIn = async (date: string, status: 'DONE' | 'SKIPPED' | 'PARTIAL') => {
+    if (habit?.targetType === 'COUNT') {
+      setModalConfig({ dateStr: date, initialData: { status } });
+      setModalOpen(true);
+      return;
+    }
+    
     try {
       await checkInMutation.mutateAsync({
         habitId,
-        data: { checkInDate: date, status }
+        data: { date, status }
       });
       toast.success(`Updated check-in for ${date}`);
     } catch (error) {
       toast.error('Failed to update check-in');
     }
   };
+
+  const handleModalSubmit = async (data: any) => {
+    if (!modalConfig) return;
+    try {
+      await checkInMutation.mutateAsync({
+        habitId,
+        data: {
+          date: modalConfig.dateStr,
+          ...data
+        }
+      });
+      toast.success(`Updated check-in for ${modalConfig.dateStr}`);
+    } catch (error) {
+      toast.error('Failed to update check-in');
+    }
+  };
+
 
   // Generate last 7 days for history list, filtering by creation date
 const formatDate = (date: Date) => {
@@ -142,13 +185,17 @@ const diffInDays = Math.floor(
 );
 
 // Always include today
-const numberOfDays = Math.min(diffInDays + 1, 7);
+const maxAvailableDays = diffInDays + 1;
+const itemsPerPage = 7;
+const startOffset = historyPage * itemsPerPage;
+const daysToShow = Math.max(0, Math.min(itemsPerPage, maxAvailableDays - startOffset));
+const hasMoreHistory = startOffset + itemsPerPage < maxAvailableDays;
 
 const pastDays = Array.from(
-  { length: Math.max(1, numberOfDays) },
+  { length: Math.max(1, daysToShow) },
   (_, i) => {
     const d = new Date(todayOnly);
-    d.setDate(todayOnly.getDate() - i);
+    d.setDate(todayOnly.getDate() - (startOffset + i));
     return formatDate(d);
   }
 );
@@ -186,6 +233,13 @@ const pastDays = Array.from(
           <Button variant="outline" size="sm" onClick={() => navigate(`/habits/${habit.id}/edit`)}>
             <Edit size={16} className="mr-2" /> Edit
           </Button>
+          
+          {habit.status !== 'ARCHIVED' && (
+            <Button variant="outline" size="sm" onClick={() => toggleStatus('ARCHIVED')} title="Archive Habit">
+              <Archive size={16} className="mr-2" /> Archive
+            </Button>
+          )}
+
           <Button variant="danger" size="icon" onClick={handleDelete} title="Delete Habit">
             <Trash2 size={16} />
           </Button>
@@ -227,6 +281,9 @@ const pastDays = Array.from(
           </CardContent>
         </Card>
       </div>
+      
+      {/* Visual Analytics */}
+      <HabitCharts habitId={habitId} />
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -234,49 +291,101 @@ const pastDays = Array.from(
         <div className="lg:col-span-2 space-y-8">
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-lg font-bold font-heading text-[var(--text-h)] mb-4">Recent History (Last 07 days)</h2>
+              <h2 className="text-lg font-bold font-heading text-[var(--text-h)] mb-4">
+                {historyPage === 0 ? "Recent History (Last 07 days)" : `History (Days ${historyPage * 7 + 1}-${historyPage * 7 + 7})`}
+              </h2>
               <div className="space-y-3">
                 {pastDays.map(date => {
                   const checkIn = history.find(c => c.checkInDate === date);
                   const isException = exceptions.some(e => e.exceptionDate === date);
-                  const isToday = date === new Date().toISOString().split('T')[0];
+                  const isToday = date === todayDate;
                   
-                  let statusLabel = 'Pending';
-                  let statusColor = 'text-[var(--text)] bg-[var(--code-bg)]';
-                  
-                  if (checkIn?.status === 'DONE') {
-                    statusLabel = 'Done';
-                    statusColor = 'text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400';
-                  } else if (checkIn?.status === 'PARTIAL') {
-                    statusLabel = 'Partial';
-                    statusColor = 'text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400';
-                  } else if (checkIn?.status === 'SKIPPED') {
-                    statusLabel = 'Skipped';
-                    statusColor = 'text-rose-700 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400';
-                  } else if (isException) {
-                    statusLabel = 'Exception';
-                    statusColor = 'text-blue-700 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400';
+                  let currentStatus = checkIn?.status || 'PENDING';
+                  if (isToday && habit.todayStatus) {
+                    currentStatus = habit.todayStatus;
                   }
 
-                  return (
-                    <div key={date} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] hover:bg-[var(--code-bg)] transition-colors">
+                  let statusLabel = 'Pending';
+                  let statusColor = 'text-[var(--text)] bg-[var(--code-bg)] border-dashed border-[var(--border)]';
+                  let isFinished = false;
+                  
+                  if (currentStatus === 'DONE') {
+                    statusLabel = 'Done';
+                    statusColor = 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
+                    isFinished = true;
+                  } else if (currentStatus === 'PARTIAL') {
+                    statusLabel = 'Partial';
+                    statusColor = 'text-amber-700 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
+                    isFinished = true;
+                  } else if (currentStatus === 'SKIPPED') {
+                    statusLabel = 'Skipped';
+                    statusColor = 'text-rose-700 bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800';
+                    isFinished = true;
+                  } else if (isException) {
+                    statusLabel = 'Exception';
+                    statusColor = 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+                    isFinished = true;
+                  }
+
+                   return (
+                    <div key={date} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isFinished ? 'bg-[var(--social-bg)]/30 border-[var(--border)] opacity-80' : 'bg-[var(--bg)] border-[var(--accent-border)] shadow-sm'}`}>
                       <div className="flex items-center gap-4">
-                        <span className="font-mono text-sm font-medium">{date} {isToday && '(Today)'}</span>
-                        <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase ${statusColor}`}>
-                          {statusLabel}
-                        </span>
+                        <div className={`w-2 h-2 rounded-full ${isFinished ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                        <div>
+                          <span className="font-mono text-sm font-bold block text-[var(--text-h)]">{date} {isToday && '(Today)'}</span>
+                          <span className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-black uppercase border ${statusColor}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
                       </div>
                       
-                      {!isException && (!checkIn || checkIn.status !== 'DONE') && (
+                      {!isFinished && (
                         <div className="flex gap-2">
-                           <Button size="sm" variant="ghost" onClick={() => handlePastCheckIn(date, 'SKIPPED')}>Skip</Button>
-                           <Button size="sm" onClick={() => handlePastCheckIn(date, 'DONE')}><Check size={16}/></Button>
+                           <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => handlePastCheckIn(date, 'SKIPPED')}>Skip</Button>
+                           <Button size="sm" className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600" onClick={() => handlePastCheckIn(date, 'DONE')}><Check size={14} className="mr-1"/> Done</Button>
+                        </div>
+                      )}
+                      
+                      {isFinished && currentStatus !== 'PENDING' && (
+                        <div className="flex gap-2">
+                           {habit.targetType === 'COUNT' && (
+                             <Button size="sm" variant="ghost" className="h-8 text-[var(--text)] opacity-50 hover:opacity-100" onClick={() => {
+                               setModalConfig({ dateStr: date, initialData: checkIn });
+                               setModalOpen(true);
+                             }}>Edit</Button>
+                           )}
+                           {checkIn?.id && (
+                             <Button size="sm" variant="ghost" className="h-8 text-[var(--text)] opacity-50 hover:opacity-100" onClick={() => handleDeleteCheckIn(checkIn.id)}>Reset</Button>
+                           )}
                         </div>
                       )}
                     </div>
                   );
                 })}
               </div>
+
+              {/* Pagination Controls */}
+              {(historyPage > 0 || hasMoreHistory) && (
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-[var(--border)]">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setHistoryPage(p => p + 1)} 
+                    disabled={!hasMoreHistory}
+                  >
+                    &larr; Older
+                  </Button>
+                  <span className="text-sm font-medium text-[var(--text)]">Page {historyPage + 1}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setHistoryPage(p => Math.max(0, p - 1))} 
+                    disabled={historyPage === 0}
+                  >
+                    Newer &rarr;
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -362,6 +471,16 @@ const pastDays = Array.from(
           </Card>
         </div>
       </div>
+      <CheckInModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={modalConfig?.initialData}
+        isCountType={habit.targetType === 'COUNT'}
+        targetValue={habit.targetValue}
+        unit={habit.unit}
+        dateStr={modalConfig?.dateStr || ''}
+      />
     </div>
   );
 };

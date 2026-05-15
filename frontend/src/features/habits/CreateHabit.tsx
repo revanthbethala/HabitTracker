@@ -22,6 +22,7 @@ const habitSchema = z.object({
   scheduleType: z.enum(['DAILY', 'SPECIFIC_DAYS', 'WEEKLY_COUNT']),
   weekdays: z.array(z.string()).optional().nullable(),
   weeklyTarget: z.preprocess((val) => (val === "" || val === null || isNaN(val as number) ? undefined : Number(val)), z.number().min(1).max(7).optional()).nullable(),
+  startDate: z.string().optional(),
 }).refine(data => {
   if (data.targetType === 'COUNT' && !data.targetValue) return false;
   return true;
@@ -48,7 +49,7 @@ export const CreateHabit: React.FC = () => {
   const { createHabit } = useHabitMutations();
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<HabitFormValues>({
-    resolver: zodResolver(habitSchema),
+    resolver: zodResolver(habitSchema) as any,
     defaultValues: {
       targetType: 'YES_NO',
       scheduleType: 'DAILY',
@@ -115,6 +116,12 @@ export const CreateHabit: React.FC = () => {
                 placeholder="e.g. Health, Learning"
                 {...register('category')}
                 error={errors.category?.message}
+              />
+              <Input
+                label="Start Date (Optional)"
+                type="date"
+                {...register('startDate')}
+                error={errors.startDate?.message}
               />
             </div>
           </CardContent>

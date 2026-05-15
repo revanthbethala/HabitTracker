@@ -16,6 +16,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (storedToken && storedUser) {
       setToken(storedToken);
+      setRefreshToken(storedRefreshToken);
       // We don't necessarily need refreshToken in state if we only use it in interceptors, 
       // but it's good for consistency
       try {
@@ -41,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (newToken: string, newRefreshToken: string, newUser: User) => {
     setToken(newToken);
+    setRefreshToken(newRefreshToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('refreshToken', newRefreshToken);
@@ -49,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setToken(null);
+    setRefreshToken(null);
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
@@ -60,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         token,
+        refreshToken,
         isAuthenticated: !!token,
         isLoading,
         login,

@@ -16,6 +16,7 @@ export const Badges: React.FC = () => {
   }
 
   const badges = response?.data || [];
+console.log("badges:",badges);
 
   return (
     <div className="space-y-8">
@@ -23,7 +24,6 @@ export const Badges: React.FC = () => {
         <h1 className="text-3xl font-bold font-heading text-[var(--text-h)] tracking-tight">Achievement Hall</h1>
         <p className="text-[var(--text)]">Track your progress and earn rewards.</p>
       </div>
-
       {badges.length === 0 ? (
          <Card className="bg-[var(--code-bg)] border-dashed mt-8">
           <CardContent className="p-12 flex flex-col items-center justify-center text-center">

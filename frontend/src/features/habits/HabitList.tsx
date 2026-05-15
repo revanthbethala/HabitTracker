@@ -10,8 +10,9 @@ import toast from 'react-hot-toast';
 
 export const HabitList: React.FC = () => {
   const [filter, setFilter] = useState<HabitStatus | 'ALL'>('ACTIVE');
+  const [sort, setSort] = useState<string>('name');
   
-  const { data: response, isLoading } = useHabits(filter === 'ALL' ? undefined : filter);
+  const { data: response, isLoading } = useHabits(filter === 'ALL' ? undefined : filter, sort);
   const { deleteHabit } = useHabitMutations();
 
   if (isLoading) {
@@ -39,25 +40,40 @@ export const HabitList: React.FC = () => {
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <Filter size={18} className="text-[var(--text)] mr-2 flex-shrink-0" />
-        {['ALL', 'ACTIVE', 'PAUSED', 'ARCHIVED'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status as HabitStatus | 'ALL')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              filter === status 
-                ? 'bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]' 
-                : 'bg-[var(--code-bg)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--border)]'
-            }`}
+      {/* Filters and Sorting */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide flex-1">
+          <Filter size={18} className="text-[var(--text)] mr-2 flex-shrink-0" />
+          {['ALL', 'ACTIVE', 'PAUSED', 'ARCHIVED'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status as HabitStatus | 'ALL')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                filter === status 
+                  ? 'bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]' 
+                  : 'bg-[var(--code-bg)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--border)]'
+              }`}
+            >
+              {status.charAt(0) + status.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-[var(--text)]">Sort by:</span>
+          <select 
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="bg-[var(--bg)] border border-[var(--border)] rounded-md px-3 py-1.5 text-sm text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           >
-            {status.charAt(0) + status.slice(1).toLowerCase()}
-          </button>
-        ))}
+            <option value="name">Name (A-Z)</option>
+            <option value="recent">Recent Activity</option>
+          </select>
+        </div>
       </div>
 
       {/* List */}
+
       {habits.length === 0 ? (
         <Card className="bg-[var(--code-bg)] border-dashed mt-8">
           <CardContent className="p-12 flex flex-col items-center justify-center text-center">
