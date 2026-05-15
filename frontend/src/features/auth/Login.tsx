@@ -11,7 +11,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email format'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -29,7 +29,7 @@ export const Login: React.FC = () => {
     try {
       const response = await authService.login(data);
       if (response.success && response.data) {
-        login(response.data.accessToken, response.data.refreshToken, response.data.user);
+        login(response.data.user);
         toast.success('Welcome back!');
         navigate('/dashboard');
       } else {

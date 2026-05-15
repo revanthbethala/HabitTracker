@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User } from '@/types/auth';
+import { apiClient } from '@/api/client';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, refreshToken: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
@@ -15,47 +14,39 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from localStorage on mount
-    const storedToken = localStorage.getItem('token');
-    const storedRefreshToken = localStorage.getItem('refreshToken');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setRefreshToken(storedRefreshToken);
-      // We don't necessarily need refreshToken in state if we only use it in interceptors, 
-      // but it's good for consistency
+    const checkSession = async () => {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse stored user');
-        localStorage.removeItem('token');
+        const userResponse = await apiClient.get('/auth/me');
+        const userData = userResponse.data.data;
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      } catch {
         localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    checkSession();
   }, []);
 
-  const login = (newToken: string, newRefreshToken: string, newUser: User) => {
-    setToken(newToken);
-    setRefreshToken(newRefreshToken);
+  const login = (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('refreshToken', newRefreshToken);
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const logout = () => {
-    setToken(null);
-    setRefreshToken(null);
+  const logout = async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (e) {
+      console.error('Logout request failed', e);
+    }
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
   };
 
@@ -63,9 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        token,
-        refreshToken,
-        isAuthenticated: !!token,
+        isAuthenticated: !!user,
         isLoading,
         login,
         logout,

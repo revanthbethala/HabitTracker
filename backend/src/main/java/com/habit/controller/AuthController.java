@@ -28,15 +28,74 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<JwtAuthResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> login(
+            @Valid @RequestBody LoginRequest loginRequest,
+            jakarta.servlet.http.HttpServletResponse response) {
         JwtAuthResponse jwtAuthResponse = authService.login(loginRequest);
+        
+        // Set Refresh Token Cookie
+        org.springframework.http.ResponseCookie refreshCookie = org.springframework.http.ResponseCookie.from("refreshToken", jwtAuthResponse.getRefreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("Lax")
+                .build();
+        
+        // Set Access Token Cookie
+        org.springframework.http.ResponseCookie accessCookie = org.springframework.http.ResponseCookie.from("accessToken", jwtAuthResponse.getAccessToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(15 * 60) // 15 minutes or match JWT expiration
+                .sameSite("Lax")
+                .build();
+        
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, accessCookie.toString());
+        
+        // Remove refresh token from response body for security
+        jwtAuthResponse.setRefreshToken(null);
+        
         return ResponseEntity.ok(ApiResponse.success("Login successful", jwtAuthResponse));
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<JwtAuthResponse>> refreshToken(@Valid @RequestBody TokenRefreshRequest request) {
-        JwtAuthResponse jwtAuthResponse = authService.refreshToken(request.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", jwtAuthResponse));
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> refreshToken(
+            @org.springframework.web.bind.annotation.CookieValue(name = "refreshToken", required = false) String refreshToken,
+            jakarta.servlet.http.HttpServletResponse response) {
+        
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            return new ResponseEntity<>(ApiResponse.<JwtAuthResponse>error("Refresh token missing", null), HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            JwtAuthResponse jwtAuthResponse = authService.refreshToken(refreshToken);
+            
+            org.springframework.http.ResponseCookie refreshCookie = org.springframework.http.ResponseCookie.from("refreshToken", jwtAuthResponse.getRefreshToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(7 * 24 * 60 * 60)
+                    .sameSite("Lax")
+                    .build();
+
+            org.springframework.http.ResponseCookie accessCookie = org.springframework.http.ResponseCookie.from("accessToken", jwtAuthResponse.getAccessToken())
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(15 * 60)
+                    .sameSite("Lax")
+                    .build();
+            
+            response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString());
+            response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, accessCookie.toString());
+            
+            jwtAuthResponse.setRefreshToken(null);
+            return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", jwtAuthResponse));
+        } catch (Exception e) {
+            return new ResponseEntity<>(ApiResponse.<JwtAuthResponse>error("Invalid refresh token", null), HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @GetMapping("/me")
@@ -46,8 +105,30 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout() {
+    public ResponseEntity<ApiResponse<String>> logout(jakarta.servlet.http.HttpServletResponse response) {
         authService.logout();
+        
+        // Clear refresh token cookie
+        org.springframework.http.ResponseCookie refreshCookie = org.springframework.http.ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+
+        // Clear access token cookie
+        org.springframework.http.ResponseCookie accessCookie = org.springframework.http.ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, accessCookie.toString());
+        
         return ResponseEntity.ok(ApiResponse.success("User logged out successfully", null));
     }
 }
