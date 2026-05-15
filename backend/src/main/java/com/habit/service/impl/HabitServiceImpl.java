@@ -1,15 +1,20 @@
 package com.habit.service.impl;
 
 import com.habit.dto.request.HabitRequest;
+import com.habit.dto.response.HabitHistoryDayResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.entity.CheckIn;
 import com.habit.entity.Habit;
+import com.habit.entity.HabitException;
 import com.habit.entity.User;
 import com.habit.enums.CheckInStatus;
+import com.habit.enums.HabitHistoryStatus;
 import com.habit.enums.HabitStatus;
 import com.habit.enums.ScheduleType;
 import com.habit.exception.ResourceNotFoundException;
 import com.habit.exception.UnauthorizedException;
+import com.habit.repository.CheckInRepository;
+import com.habit.repository.HabitExceptionRepository;
 import com.habit.repository.HabitRepository;
 import com.habit.security.SecurityUtils;
 import com.habit.service.HabitService;
@@ -29,6 +34,8 @@ import java.util.stream.Collectors;
 public class HabitServiceImpl implements HabitService {
 
     private final HabitRepository habitRepository;
+    private final CheckInRepository checkInRepository;
+    private final HabitExceptionRepository habitExceptionRepository;
     private final HabitScheduleService habitScheduleService;
 
     @Override
@@ -311,5 +318,61 @@ public class HabitServiceImpl implements HabitService {
         
         if (totalWeeks == 0) return 0;
         return (int) ((totalRatio * 100.0) / totalWeeks);
+    }
+    @Override
+    public List<HabitHistoryDayResponse> getHabitHistory(Long habitId, Integer days) {
+        User currentUser = SecurityUtils.getCurrentUser();
+        Habit habit = habitRepository.findById(habitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Habit not found"));
+
+        if (!habit.getUser().getId().equals(currentUser.getId())) {
+            throw new UnauthorizedException("You do not have permission to access this habit's history");
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
+
+        List<CheckIn> checkIns = checkInRepository.findByHabitIdAndCheckInDateBetween(habitId, startDate, today);
+        List<HabitException> exceptions = habitExceptionRepository.findByHabitIdAndExceptionDateBetween(habitId, startDate, today);
+
+        Map<LocalDate, CheckIn> checkInMap = checkIns.stream()
+                .collect(Collectors.toMap(CheckIn::getCheckInDate, c -> c));
+        Map<LocalDate, HabitException> exceptionMap = exceptions.stream()
+                .collect(Collectors.toMap(HabitException::getExceptionDate, e -> e));
+
+        List<HabitHistoryDayResponse> history = new ArrayList<>();
+        LocalDate current = startDate;
+        while (!current.isAfter(today)) {
+            HabitHistoryDayResponse.HabitHistoryDayResponseBuilder builder = HabitHistoryDayResponse.builder()
+                    .date(current);
+
+            boolean isException = exceptionMap.containsKey(current);
+            boolean isExpected = habitScheduleService.isExpected(habit, current);
+            CheckIn checkIn = checkInMap.get(current);
+
+            builder.expected(isExpected);
+            builder.exception(isException);
+
+            if (isException) {
+                builder.status(HabitHistoryStatus.EXCEPTION);
+                builder.exceptionReason(exceptionMap.get(current).getReason());
+            } else if (isExpected) {
+                if (checkIn != null) {
+                    builder.status(HabitHistoryStatus.valueOf(checkIn.getStatus().name()));
+                    builder.checkInId(checkIn.getId());
+                    builder.value(checkIn.getValue());
+                    builder.note(checkIn.getNote());
+                } else {
+                    builder.status(HabitHistoryStatus.PENDING);
+                }
+            } else {
+                builder.status(HabitHistoryStatus.NOT_EXPECTED);
+            }
+
+            history.add(builder.build());
+            current = current.plusDays(1);
+        }
+
+        return history;
     }
 }

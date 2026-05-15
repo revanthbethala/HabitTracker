@@ -1,6 +1,7 @@
 package com.habit.service;
 
 import com.habit.dto.request.HabitRequest;
+import com.habit.dto.response.HabitHistoryDayResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.enums.HabitStatus;
 
@@ -13,4 +14,5 @@ public interface HabitService {
     HabitResponse updateHabit(Long id, HabitRequest request);
     void deleteHabit(Long id);
     void updateStatus(Long id, HabitStatus status);
+    List<HabitHistoryDayResponse> getHabitHistory(Long habitId, Integer days);
 }
