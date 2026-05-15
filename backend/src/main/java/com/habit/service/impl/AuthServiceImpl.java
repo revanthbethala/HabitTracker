@@ -47,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
 
         User user = User.builder()
                 .email(registerRequest.getEmail())
+                .name(registerRequest.getName())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .build();
 
@@ -75,6 +76,12 @@ public class AuthServiceImpl implements AuthService {
         return JwtAuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken.getToken())
+                .user(UserResponse.builder()
+                        .id(userDetails.getUser().getId())
+                        .email(userDetails.getUser().getEmail())
+                        .name(userDetails.getUser().getName())
+                        .createdAt(userDetails.getUser().getCreatedAt())
+                        .build())
                 .build();
     }
 
@@ -103,14 +110,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private RefreshToken createRefreshToken(User user) {
-        // Delete existing token if any
-        refreshTokenRepository.deleteByUser(user);
+        RefreshToken refreshToken = refreshTokenRepository.findByUser(user)
+                .orElse(new RefreshToken());
 
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
-                .build();
+        refreshToken.setUser(user);
+        refreshToken.setToken(UUID.randomUUID().toString());
+        refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
 
         return refreshTokenRepository.save(refreshToken);
     }
@@ -123,6 +128,7 @@ public class AuthServiceImpl implements AuthService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .name(user.getName())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
