@@ -50,6 +50,11 @@ public class DashboardServiceImpl implements DashboardService {
         
         int progress = expectedToday.isEmpty() ? 100 : (int) ((completedToday * 100.0) / expectedToday.size());
 
+        int maxStreak = allHabits.stream()
+                .mapToInt(HabitResponse::getCurrentStreak)
+                .max()
+                .orElse(0);
+
         List<HabitResponse> dueNow = expectedToday.stream()
                 .filter(h -> !"DONE".equals(h.getTodayStatus()))
                 .collect(Collectors.toList());
@@ -59,6 +64,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalBadgesEarned(totalBadges)
                 .globalCompletionRate(avgCompletionRate)
                 .todayProgress(progress)
+                .currentStreak(maxStreak)
                 .dueHabits(dueNow)
                 .build();
     }

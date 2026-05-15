@@ -8,15 +8,19 @@ import {
   Award, 
   LogOut, 
   Menu,
-  X
+  X,
+  Flame,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { useDashboard } from '@/hooks/useMetrics';
 
 export const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: dashboard } = useDashboard();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -38,9 +42,17 @@ export const MainLayout: React.FC = () => {
           <Activity size={24} strokeWidth={2.5} />
           <span className="text-lg font-bold font-heading text-[var(--text-h)] tracking-tight">HabitTracker</span>
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-[var(--text)]">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="flex items-center gap-8">
+          {dashboard?.data && (
+            <div className="flex items-center gap-1  text-orange-500 px-3 py-1 rounded-full border border-orange-500/20">
+              <Flame size={16} fill="currentColor" />
+              <span className="text-sm font-bold">{dashboard.data.currentStreak || 0}</span>
+            </div>
+          )}
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-[var(--text)]">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Sidebar (Desktop & Mobile Drawer) */}
@@ -58,9 +70,17 @@ export const MainLayout: React.FC = () => {
             `}
           >
             {/* Logo */}
-            <div className="p-6 hidden md:flex items-center gap-2 text-[var(--accent)] border-b border-[var(--border)]">
-              <Activity size={28} strokeWidth={2.5} />
-              <span className="text-xl font-bold font-heading text-[var(--text-h)] tracking-tight">HabitTracker</span>
+            <div className="p-6 hidden md:flex items-center justify-between border-b border-[var(--border)]">
+              <div className="flex items-center gap-2 text-[var(--accent)]">
+                <ChartNoAxesCombined size={32} strokeWidth={2.5} />
+                <span className="text-xl font-bold font-heading text-[var(--text-h)] tracking-tight">HabitTracker</span>
+              </div>
+              {dashboard?.data && (
+                <div className="flex items-center gap-1 text-orange-500 px-3 py-1.5" title="Highest Current Streak">
+                  <Flame size={18} fill="currentColor" />
+                  <span className="font-bold">{dashboard.data.currentStreak || 0}</span>
+                </div>
+              )}
             </div>
 
             {/* Nav Links */}

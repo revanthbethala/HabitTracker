@@ -80,6 +80,7 @@ export interface DashboardSummary {
   totalBadgesEarned: number;
   globalCompletionRate: number;
   todayProgress: number;
+  currentStreak: number;
   dueHabits: Habit[];
 }
 
