@@ -2,8 +2,11 @@ package com.habit.controller;
 
 import com.habit.dto.request.HabitRequest;
 import com.habit.dto.response.ApiResponse;
+import com.habit.dto.response.HabitHistoryDayResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.enums.HabitStatus;
+import com.habit.security.SecurityUtils;
+import com.habit.service.BadgeService;
 import com.habit.service.HabitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +21,13 @@ import java.util.List;
 public class HabitController {
 
     private final HabitService habitService;
+    private final BadgeService badgeService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<HabitResponse>> createHabit(@Valid @RequestBody HabitRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Habit created successfully", habitService.createHabit(request)));
+        HabitResponse response = habitService.createHabit(request);
+        badgeService.checkAndAwardBadges(SecurityUtils.getCurrentUser());
+        return ResponseEntity.ok(ApiResponse.success("Habit created successfully", response));
     }
 
     @GetMapping
@@ -50,18 +56,31 @@ public class HabitController {
     @PatchMapping("/{id}/pause")
     public ResponseEntity<ApiResponse<Void>> pauseHabit(@PathVariable Long id) {
         habitService.updateStatus(id, HabitStatus.PAUSED);
+        badgeService.checkAndAwardBadges(SecurityUtils.getCurrentUser());
         return ResponseEntity.ok(ApiResponse.success("Habit paused successfully", null));
     }
 
     @PatchMapping("/{id}/resume")
     public ResponseEntity<ApiResponse<Void>> resumeHabit(@PathVariable Long id) {
         habitService.updateStatus(id, HabitStatus.ACTIVE);
+        badgeService.checkAndAwardBadges(SecurityUtils.getCurrentUser());
         return ResponseEntity.ok(ApiResponse.success("Habit resumed successfully", null));
     }
 
     @PatchMapping("/{id}/archive")
     public ResponseEntity<ApiResponse<Void>> archiveHabit(@PathVariable Long id) {
         habitService.updateStatus(id, HabitStatus.ARCHIVED);
+        badgeService.checkAndAwardBadges(SecurityUtils.getCurrentUser());
         return ResponseEntity.ok(ApiResponse.success("Habit archived successfully", null));
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<ApiResponse<List<HabitHistoryDayResponse>>> getHabitHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "30") Integer days) {
+        if (days < 1 || days > 90) {
+            days = 30; // Basic fallback or could throw error
+        }
+        return ResponseEntity.ok(ApiResponse.success(habitService.getHabitHistory(id, days)));
     }
 }
