@@ -13,6 +13,7 @@ import com.habit.exception.UnauthorizedException;
 import com.habit.repository.HabitRepository;
 import com.habit.security.SecurityUtils;
 import com.habit.service.HabitService;
+import com.habit.service.HabitScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 public class HabitServiceImpl implements HabitService {
 
     private final HabitRepository habitRepository;
+    private final HabitScheduleService habitScheduleService;
 
     @Override
     @Transactional
@@ -96,6 +98,7 @@ public class HabitServiceImpl implements HabitService {
         if (request.getWeeklyTarget() != null) habit.setWeeklyTarget(request.getWeeklyTarget());
         if (request.getStartDate() != null) habit.setStartDate(request.getStartDate());
         if (request.getEndDate() != null) habit.setEndDate(request.getEndDate());
+        if (request.getStatus() != null) habit.setStatus(request.getStatus());
 
         return mapToResponse(habitRepository.save(habit));
     }
@@ -145,6 +148,11 @@ public class HabitServiceImpl implements HabitService {
                 .max(LocalDate::compareTo)
                 .orElse(null);
 
+        String reminderTime = null;
+        if (habit.getReminder() != null && Boolean.TRUE.equals(habit.getReminder().getEnabled())) {
+            reminderTime = habit.getReminder().getTime().toString();
+        }
+
         return HabitResponse.builder()
                 .id(habit.getId())
                 .name(habit.getName())
@@ -166,6 +174,8 @@ public class HabitServiceImpl implements HabitService {
                 .todayStatus(todayCheckIn.map(c -> c.getStatus().name()).orElse("PENDING"))
                 .lastCheckIn(lastCheckIn)
                 .createdAt(habit.getCreatedAt())
+                .reminderTime(reminderTime)
+                .isExpectedToday(habitScheduleService.isExpected(habit, today))
                 .build();
     }
 
@@ -174,22 +184,17 @@ public class HabitServiceImpl implements HabitService {
             return calculateWeeklyStreak(habit, today);
         }
         
-        int streak = 0;
-        LocalDate date = today;
+        if (habitScheduleService.isSkipped(habit, today)) return 0;
         
-        boolean doneToday = isDone(habit, today);
-        if (doneToday) {
+        int streak = 0;
+        if (habitScheduleService.isDone(habit, today)) {
             streak++;
-            date = date.minusDays(1);
-        } else if (isExpected(habit, today)) {
-            date = date.minusDays(1);
-        } else {
-            date = date.minusDays(1);
         }
-
+        
+        LocalDate date = today.minusDays(1);
         while (habit.getStartDate() != null && !date.isBefore(habit.getStartDate())) {
-            if (isExpected(habit, date)) {
-                if (isDone(habit, date)) {
+            if (habitScheduleService.isExpected(habit, date)) {
+                if (habitScheduleService.isDone(habit, date)) {
                     streak++;
                 } else {
                     break;
@@ -201,24 +206,22 @@ public class HabitServiceImpl implements HabitService {
     }
 
     private int calculateWeeklyStreak(Habit habit, LocalDate today) {
-        if (habit.getStartDate() == null) return 0;
         int streak = 0;
-        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         
-        if (isWeeklyTargetMet(habit, startOfWeek, today)) {
+        if (habitScheduleService.isWeeklyTargetMet(habit, currentWeekStart, today)) {
             streak++;
-        } else if (today.equals(startOfWeek.plusDays(6))) {
-             return 0;
         }
         
-        LocalDate prevWeekStart = startOfWeek.minusWeeks(1);
-        while (!prevWeekStart.isBefore(habit.getStartDate())) {
-            if (isWeeklyTargetMet(habit, prevWeekStart, prevWeekStart.plusDays(6))) {
+        currentWeekStart = currentWeekStart.minusWeeks(1);
+        while (habit.getStartDate() != null && !currentWeekStart.isBefore(habit.getStartDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)))) {
+            LocalDate weekEnd = currentWeekStart.plusDays(6);
+            if (habitScheduleService.isWeeklyTargetMet(habit, currentWeekStart, weekEnd)) {
                 streak++;
             } else {
                 break;
             }
-            prevWeekStart = prevWeekStart.minusWeeks(1);
+            currentWeekStart = currentWeekStart.minusWeeks(1);
         }
         return streak;
     }
@@ -233,8 +236,8 @@ public class HabitServiceImpl implements HabitService {
         int current = 0;
         LocalDate date = habit.getStartDate();
         while (!date.isAfter(today)) {
-            if (isExpected(habit, date)) {
-                if (isDone(habit, date)) {
+            if (habitScheduleService.isExpected(habit, date)) {
+                if (habitScheduleService.isDone(habit, date)) {
                     current++;
                     max = Math.max(max, current);
                 } else {
@@ -252,7 +255,7 @@ public class HabitServiceImpl implements HabitService {
         int current = 0;
         LocalDate weekStart = habit.getStartDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         while (!weekStart.isAfter(today)) {
-            if (isWeeklyTargetMet(habit, weekStart, weekStart.plusDays(6))) {
+            if (habitScheduleService.isWeeklyTargetMet(habit, weekStart, weekStart.plusDays(6))) {
                 current++;
                 max = Math.max(max, current);
             } else {
@@ -265,6 +268,11 @@ public class HabitServiceImpl implements HabitService {
 
     private int calculateCompletionRate(Habit habit, LocalDate today, int days) {
         if (habit.getStartDate() == null) return 0;
+
+        if (habit.getScheduleType() == ScheduleType.WEEKLY_COUNT) {
+            return calculateWeeklyCompletionRate(habit, today, days);
+        }
+
         LocalDate startRange = today.minusDays(days - 1);
         if (startRange.isBefore(habit.getStartDate())) startRange = habit.getStartDate();
 
@@ -273,9 +281,9 @@ public class HabitServiceImpl implements HabitService {
 
         LocalDate date = startRange;
         while (!date.isAfter(today)) {
-            if (isExpected(habit, date)) {
+            if (habitScheduleService.isExpected(habit, date)) {
                 expectedDays++;
-                if (isDone(habit, date)) {
+                if (habitScheduleService.isDone(habit, date)) {
                     doneDays++;
                 }
             }
@@ -286,35 +294,22 @@ public class HabitServiceImpl implements HabitService {
         return (int) ((doneDays * 100.0) / expectedDays);
     }
 
-    private boolean isExpected(Habit habit, LocalDate date) {
-        if (habit.getHabitExceptions() != null) {
-            boolean isException = habit.getHabitExceptions().stream()
-                    .anyMatch(e -> e.getExceptionDate() != null && e.getExceptionDate().equals(date));
-            if (isException) return false;
+    private int calculateWeeklyCompletionRate(Habit habit, LocalDate today, int days) {
+        LocalDate startRange = today.minusDays(days - 1);
+        if (startRange.isBefore(habit.getStartDate())) startRange = habit.getStartDate();
+        
+        LocalDate currentWeekStart = startRange.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        int totalWeeks = 0;
+        double totalRatio = 0.0;
+        
+        while (!currentWeekStart.isAfter(today)) {
+            totalWeeks++;
+            LocalDate weekEnd = currentWeekStart.plusDays(6);
+            totalRatio += habitScheduleService.getWeeklyCompletionRatio(habit, currentWeekStart, weekEnd.isAfter(today) ? today : weekEnd);
+            currentWeekStart = currentWeekStart.plusWeeks(1);
         }
-
-        ScheduleType type = habit.getScheduleType();
-        if (type == ScheduleType.DAILY) return true;
-        if (type == ScheduleType.SPECIFIC_DAYS) {
-            return habit.getWeekdays() != null && habit.getWeekdays().contains(date.getDayOfWeek());
-        }
-        if (type == ScheduleType.WEEKLY_COUNT) return true; 
-
-        return false;
-    }
-
-    private boolean isDone(Habit habit, LocalDate date) {
-        if (habit.getCheckIns() == null) return false;
-        return habit.getCheckIns().stream()
-                .anyMatch(c -> c.getCheckInDate() != null && c.getCheckInDate().equals(date) && c.getStatus() == CheckInStatus.DONE);
-    }
-
-    private boolean isWeeklyTargetMet(Habit habit, LocalDate start, LocalDate end) {
-        if (habit.getCheckIns() == null) return false;
-        long doneCount = habit.getCheckIns().stream()
-                .filter(c -> c.getCheckInDate() != null && !c.getCheckInDate().isBefore(start) && !c.getCheckInDate().isAfter(end))
-                .filter(c -> c.getStatus() == CheckInStatus.DONE)
-                .count();
-        return habit.getWeeklyTarget() != null && doneCount >= habit.getWeeklyTarget();
+        
+        if (totalWeeks == 0) return 0;
+        return (int) ((totalRatio * 100.0) / totalWeeks);
     }
 }
