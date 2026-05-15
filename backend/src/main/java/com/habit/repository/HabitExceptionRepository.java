@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface HabitExceptionRepository extends JpaRepository<HabitException, Long> {
     List<HabitException> findByHabitId(Long habitId);
     Optional<HabitException> findByHabitIdAndExceptionDate(Long habitId, LocalDate exceptionDate);
+    List<HabitException> findByHabitIdAndExceptionDateBetween(Long habitId, LocalDate start, LocalDate end);
 }

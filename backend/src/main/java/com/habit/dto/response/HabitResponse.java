@@ -38,4 +38,6 @@ public class HabitResponse {
     private String todayStatus; 
     private LocalDate lastCheckIn;
     private java.time.LocalDateTime createdAt;
+    private String reminderTime;
+    private Boolean isExpectedToday;
 }

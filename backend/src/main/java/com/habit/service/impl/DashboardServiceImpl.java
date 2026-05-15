@@ -1,20 +1,22 @@
 package com.habit.service.impl;
 
+import com.habit.dto.response.DailyMetricResponse;
 import com.habit.dto.response.DashboardResponse;
 import com.habit.dto.response.HabitResponse;
 import com.habit.entity.Habit;
 import com.habit.entity.User;
 import com.habit.enums.HabitStatus;
-import com.habit.enums.ScheduleType;
 import com.habit.repository.HabitRepository;
 import com.habit.repository.UserBadgeRepository;
 import com.habit.security.SecurityUtils;
 import com.habit.service.DashboardService;
+import com.habit.service.HabitScheduleService;
 import com.habit.service.HabitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final HabitRepository habitRepository;
     private final UserBadgeRepository userBadgeRepository;
     private final HabitService habitService;
+    private final HabitScheduleService habitScheduleService;
 
     @Override
     public DashboardResponse getDashboardSummary() {
@@ -37,47 +40,73 @@ public class DashboardServiceImpl implements DashboardService {
         int avgCompletionRate = allHabits.isEmpty() ? 0 : 
                 (int) allHabits.stream().mapToInt(HabitResponse::getCompletionRate).average().orElse(0.0);
 
-        List<HabitResponse> dueToday = filterDueToday(allHabits);
+        List<HabitResponse> expectedToday = allHabits.stream()
+                .filter(HabitResponse::getIsExpectedToday)
+                .collect(Collectors.toList());
         
-        long completedToday = dueToday.stream()
+        long completedToday = expectedToday.stream()
                 .filter(h -> "DONE".equals(h.getTodayStatus()))
                 .count();
         
-        int progress = dueToday.isEmpty() ? 100 : (int) ((completedToday * 100.0) / dueToday.size());
+        int progress = expectedToday.isEmpty() ? 100 : (int) ((completedToday * 100.0) / expectedToday.size());
+
+        List<HabitResponse> dueNow = expectedToday.stream()
+                .filter(h -> !"DONE".equals(h.getTodayStatus()))
+                .collect(Collectors.toList());
 
         return DashboardResponse.builder()
                 .totalActiveHabits(totalActive)
                 .totalBadgesEarned(totalBadges)
                 .globalCompletionRate(avgCompletionRate)
                 .todayProgress(progress)
-                .dueHabits(dueToday)
+                .dueHabits(dueNow)
                 .build();
     }
 
     @Override
     public List<HabitResponse> getDueHabits() {
         List<HabitResponse> allHabits = habitService.getAllHabits(HabitStatus.ACTIVE, "name");
-        return filterDueToday(allHabits);
-    }
-
-    private List<HabitResponse> filterDueToday(List<HabitResponse> habits) {
-        LocalDate today = LocalDate.now();
-        return habits.stream()
-                .filter(h -> isScheduledForDate(h, today))
+        return allHabits.stream()
+                .filter(HabitResponse::getIsExpectedToday)
+                .filter(h -> !"DONE".equals(h.getTodayStatus()))
                 .collect(Collectors.toList());
     }
 
-    private boolean isScheduledForDate(HabitResponse h, LocalDate date) {
-        // We need to re-verify schedule logic here because HabitResponse doesn't store the full schedule entity
-        // However, I can check if it's expected using the Habit entity from repo if needed, 
-        // but for now let's use the fields available in Response
-        
-        if (h.getScheduleType() == ScheduleType.DAILY) return true;
-        if (h.getScheduleType() == ScheduleType.SPECIFIC_DAYS) {
-            return h.getWeekdays() != null && h.getWeekdays().contains(date.getDayOfWeek());
+    @Override
+    public List<DailyMetricResponse> getGlobalHistory(Integer days) {
+        User currentUser = SecurityUtils.getCurrentUser();
+        List<Habit> activeHabits = habitRepository.findByUserIdAndStatus(currentUser.getId(), HabitStatus.ACTIVE);
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
+
+        List<DailyMetricResponse> metrics = new ArrayList<>();
+        LocalDate current = startDate;
+
+        while (!current.isAfter(today)) {
+            int expected = 0;
+            int completed = 0;
+
+            for (Habit habit : activeHabits) {
+                if (habitScheduleService.isExpected(habit, current)) {
+                    expected++;
+                    if (habitScheduleService.isDone(habit, current)) {
+                        completed++;
+                    }
+                }
+            }
+
+            metrics.add(DailyMetricResponse.builder()
+                    .date(current)
+                    .expectedCount(expected)
+                    .completedCount(completed)
+                    .completionRate(expected == 0 ? 0 : (int) ((completed * 100.0) / expected))
+                    .build());
+
+            current = current.plusDays(1);
         }
-        if (h.getScheduleType() == ScheduleType.WEEKLY_COUNT) return true;
-        
-        return false;
+
+        return metrics;
     }
 }
+

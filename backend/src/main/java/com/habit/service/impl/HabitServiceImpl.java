@@ -360,8 +360,11 @@ public class HabitServiceImpl implements HabitService {
                 if (checkIn != null) {
                     builder.status(HabitHistoryStatus.valueOf(checkIn.getStatus().name()));
                     builder.checkInId(checkIn.getId());
-                    builder.value(checkIn.getValue());
-                    builder.note(checkIn.getNote());
+builder.value(
+    checkIn.getValue() != null
+        ? checkIn.getValue().doubleValue()
+        : null
+);                    builder.note(checkIn.getNote());
                 } else {
                     builder.status(HabitHistoryStatus.PENDING);
                 }

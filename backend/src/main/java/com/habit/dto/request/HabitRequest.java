@@ -2,6 +2,7 @@ package com.habit.dto.request;
 
 import com.habit.enums.ScheduleType;
 import com.habit.enums.TargetType;
+import com.habit.validation.ValidHabitRequest;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidHabitRequest
 public class HabitRequest {
     
     @NotBlank(message = "Habit name is required")
@@ -44,4 +46,5 @@ public class HabitRequest {
 
     private LocalDate startDate;
     private LocalDate endDate;
+    private com.habit.enums.HabitStatus status;
 }
