@@ -148,14 +148,30 @@ Base Path: `/api`
 
 ---
 
-## 4. Dashboard & Badges (Planned)
+## 4. Exceptions Module
 Base Path: `/api`
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/dashboard` | `GET` | Summary of today's progress and stats |
-| `/dashboard/due` | `GET` | List of habits scheduled for today but not yet done |
-| `/badges` | `GET` | List of all badges with "earned" status |
+| `/habits/{id}/exceptions` | `POST` | Add a new exception for a habit |
+| `/habits/{id}/exceptions` | `GET` | List all exceptions for a habit |
+| `/exceptions/{id}` | `PUT` | Update an exception's date or reason |
+| `/exceptions/{id}` | `DELETE` | Delete an exception |
+
+### Request/Response Structures
+
+#### **POST /habits/{id}/exceptions**
+- **Request Body**:
+  ```json
+  {
+    "date": "2024-05-20",
+    "reason": "Family vacation"
+  }
+  ```
+
+---
+
+## 5. Dashboard & Badges (Planned)
 
 ---
 
