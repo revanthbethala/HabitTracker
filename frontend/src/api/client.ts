@@ -44,8 +44,12 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRequest = originalRequest.url?.includes('/auth/login') || 
+                         originalRequest.url?.includes('/auth/register') ||
+                         originalRequest.url?.includes('/auth/refresh-token');
+
+    // If error is 401 and we haven't retried yet and it's not an auth request
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       
       // If we are already refreshing, queue this request
       if (isRefreshing) {

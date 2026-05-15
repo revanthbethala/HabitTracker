@@ -14,7 +14,7 @@ export const useExceptionMutations = (habitId: number) => {
   const queryClient = useQueryClient();
 
   const addException = useMutation({
-    mutationFn: (data: { exceptionDate: string; reason?: string }) => 
+    mutationFn: (data: { date: string; reason?: string }) => 
       exceptionService.create(habitId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exceptions', habitId] });
@@ -40,7 +40,7 @@ export const useReminder = (habitId: number) => {
     queryKey: ['reminder', habitId],
     queryFn: () => reminderService.get(habitId),
     enabled: !!habitId,
-    retry: false, // Might return 404 if no reminder exists
+    retry: false,
   });
 };
 
@@ -48,7 +48,7 @@ export const useReminderMutations = (habitId: number) => {
   const queryClient = useQueryClient();
 
   const setReminder = useMutation({
-    mutationFn: (data: { reminderTime: string; isEnabled: boolean }) => 
+    mutationFn: (data: { time: string; enabled: boolean }) => 
       reminderService.upsert(habitId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminder', habitId] });
@@ -65,10 +65,18 @@ export const useReminderMutations = (habitId: number) => {
   return { setReminder, deleteReminder };
 };
 
-export const useCheckInHistory = (habitId: number) => {
+export const useCheckInHistory = (habitId: number, page: number = 0) => {
   return useQuery({
-    queryKey: ['checkin-history', habitId],
-    queryFn: () => checkInService.getHistory(habitId),
+    queryKey: ['checkin-history', habitId, page],
+    queryFn: () => checkInService.getHistory(habitId, page),
+    enabled: !!habitId,
+  });
+};
+
+export const useHabitHistory = (habitId: number, days: number = 30) => {
+  return useQuery({
+    queryKey: ['habit-history', habitId, days],
+    queryFn: () => checkInService.getHistoryMetrics(habitId, days),
     enabled: !!habitId,
   });
 };

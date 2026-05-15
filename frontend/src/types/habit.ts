@@ -25,6 +25,8 @@ export interface Habit {
   todayStatus: string; // "DONE", "PARTIAL", "SKIPPED", "PENDING"
   lastCheckIn?: string;
   createdAt: string;
+  reminderTime?: string;
+  isExpectedToday?: boolean;
 }
 
 export interface HabitRequest {
@@ -44,14 +46,15 @@ export interface HabitRequest {
 export interface CheckIn {
   id: number;
   habitId: number;
-  checkInDate: string;
+  checkInDate: string; // Keep this for display/local, but we'll use 'date' for API if needed.
+  // Actually, let's just use 'checkInDate' consistently for Response and 'date' for Request.
   status: CheckInStatus;
   value?: number;
   note?: string;
 }
 
 export interface CheckInRequest {
-  checkInDate: string;
+  date: string; // Backend expects 'date'
   status: CheckInStatus;
   value?: number;
   note?: string;
@@ -61,14 +64,15 @@ export interface HabitException {
   id: number;
   habitId: number;
   exceptionDate: string;
+  date: string; // Adding 'date' to match backend response/request
   reason?: string;
 }
 
 export interface Reminder {
   id: number;
   habitId: number;
-  reminderTime: string; // HH:mm
-  isEnabled: boolean;
+  time: string; // Backend returns 'time'
+  enabled: boolean; // Backend returns 'enabled'
 }
 
 export interface DashboardSummary {

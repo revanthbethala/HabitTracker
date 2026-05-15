@@ -45,8 +45,22 @@ export const useHabitMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
+  
+  const toggleStatus = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: HabitStatus }) => {
+      if (status === 'PAUSED') return habitService.pause(id);
+      if (status === 'ACTIVE') return habitService.resume(id);
+      if (status === 'ARCHIVED') return habitService.archive(id);
+      throw new Error('Invalid status');
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habit', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
 
-  return { createHabit, updateHabit, deleteHabit };
+  return { createHabit, updateHabit, deleteHabit, toggleStatus };
 };
 
 export const useCheckInMutation = () => {
@@ -58,7 +72,24 @@ export const useCheckInMutation = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
       queryClient.invalidateQueries({ queryKey: ['habit', variables.habitId] });
+      queryClient.invalidateQueries({ queryKey: ['checkin-history', variables.habitId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
+
+export const useDeleteCheckInMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ habitId, checkInId }: { habitId: number; checkInId: number }) => 
+      checkInService.delete(checkInId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habit', variables.habitId] });
+      queryClient.invalidateQueries({ queryKey: ['checkin-history', variables.habitId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+

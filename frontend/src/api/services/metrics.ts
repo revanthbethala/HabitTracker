@@ -8,8 +8,14 @@ export const checkInService = {
     return response.data;
   },
 
-  getHistory: async (habitId: number) => {
-    const response = await apiClient.get<ApiResponse<CheckIn[]>>(`/habits/${habitId}/check-ins`);
+  getHistory: async (habitId: number, page: number = 0) => {
+    // We fetch 7 items per page to align with the 7-day view
+    const response = await apiClient.get<ApiResponse<any>>(`/habits/${habitId}/check-ins?page=${page}&size=7`);
+    return response.data;
+  },
+
+  getHistoryMetrics: async (habitId: number, days: number = 30) => {
+    const response = await apiClient.get<ApiResponse<any[]>>(`/habits/${habitId}/history?days=${days}`);
     return response.data;
   },
 
@@ -26,6 +32,11 @@ export const dashboardService = {
 
   getDueHabits: async () => {
     const response = await apiClient.get<ApiResponse<any[]>>('/dashboard/due');
+    return response.data;
+  },
+
+  getGlobalSummary: async (days: number = 30) => {
+    const response = await apiClient.get<ApiResponse<any[]>>(`/dashboard/metrics?days=${days}`);
     return response.data;
   }
 };

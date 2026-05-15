@@ -8,12 +8,12 @@ export const exceptionService = {
     return response.data;
   },
 
-  create: async (habitId: number, data: { exceptionDate: string; reason?: string }) => {
+  create: async (habitId: number, data: { date: string; reason?: string }) => {
     const response = await apiClient.post<ApiResponse<HabitException>>(`/habits/${habitId}/exceptions`, data);
     return response.data;
   },
 
-  update: async (exceptionId: number, data: { exceptionDate?: string; reason?: string }) => {
+  update: async (exceptionId: number, data: { date?: string; reason?: string }) => {
     const response = await apiClient.put<ApiResponse<HabitException>>(`/exceptions/${exceptionId}`, data);
     return response.data;
   },
@@ -29,7 +29,7 @@ export const reminderService = {
     return response.data;
   },
 
-  upsert: async (habitId: number, data: { reminderTime: string; isEnabled: boolean }) => {
+  upsert: async (habitId: number, data: { time: string; enabled: boolean }) => {
     const response = await apiClient.put<ApiResponse<Reminder>>(`/habits/${habitId}/reminder`, data);
     return response.data;
   },

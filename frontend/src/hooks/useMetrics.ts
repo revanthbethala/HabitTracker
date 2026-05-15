@@ -14,3 +14,10 @@ export const useBadges = () => {
     queryFn: () => badgeService.getAll(),
   });
 };
+
+export const useGlobalMetrics = (days: number = 30) => {
+  return useQuery({
+    queryKey: ['global-metrics', days],
+    queryFn: () => dashboardService.getGlobalSummary(days),
+  });
+};
