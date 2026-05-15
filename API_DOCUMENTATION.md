@@ -34,42 +34,6 @@ Base Path: `/api/auth`
 | `/me` | `GET` | Get current user info | Yes |
 | `/logout` | `POST` | Invalidate refresh token | Yes |
 
-### Request/Response Structures
-
-#### **POST /register**
-- **Request Body**:
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "strongPassword123"
-  }
-  ```
-- **Response Data**: `null` (Message: "User registered successfully")
-
-#### **POST /login**
-- **Request Body**:
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "strongPassword123"
-  }
-  ```
-- **Response Data**:
-  ```json
-  {
-    "accessToken": "eyJhbG...",
-    "refreshToken": "550e8400-e29b..."
-  }
-  ```
-
-#### **POST /refresh-token**
-- **Request Body**:
-  ```json
-  {
-    "refreshToken": "550e8400-e29b..."
-  }
-  ```
-
 ---
 
 ## 2. Habits Module
@@ -78,48 +42,13 @@ Base Path: `/api/habits`
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/` | `POST` | Create a new habit |
-| `/` | `GET` | List all habits (filter: `status`, sort: `name\|recent`) |
+| `/` | `GET` | List all habits (filter: `status`, sort: `name|recent`) |
 | `/{id}` | `GET` | Get habit details + dynamic metrics |
 | `/{id}` | `PATCH` | Update habit configuration |
 | `/{id}` | `DELETE` | Delete habit and history |
 | `/{id}/pause` | `PATCH` | Pause a habit |
 | `/{id}/resume` | `PATCH` | Resume a paused habit |
 | `/{id}/archive` | `PATCH` | Archive a habit |
-
-### Request/Response Structures
-
-#### **POST /habits**
-- **Request Body**:
-  ```json
-  {
-    "name": "Morning Run",
-    "description": "5km run in the park",
-    "category": "Health",
-    "targetType": "YES_NO", // or COUNT
-    "targetValue": 1,
-    "unit": "times",
-    "scheduleType": "DAILY", // or SPECIFIC_DAYS, WEEKLY_COUNT
-    "weekdays": ["MONDAY", "WEDNESDAY", "FRIDAY"], // if SPECIFIC_DAYS
-    "weeklyTarget": 3, // if WEEKLY_COUNT
-    "startDate": "2024-05-15",
-    "endDate": null
-  }
-  ```
-
-#### **GET /habits/{id} (Response Data)**
-```json
-{
-  "id": 1,
-  "name": "Morning Run",
-  "status": "ACTIVE",
-  "currentStreak": 5,
-  "longestStreak": 12,
-  "completionRate": 85,
-  "totalCompletions": 45,
-  "todayStatus": "PENDING", // PENDING, DONE, SKIPPED
-  "lastCheckIn": "2024-05-14"
-}
-```
 
 ---
 
@@ -131,20 +60,6 @@ Base Path: `/api`
 | `/habits/{id}/check-ins` | `PUT` | Upsert check-in for a date (within last 7 days) |
 | `/habits/{id}/check-ins` | `GET` | Get paginated check-in history |
 | `/check-ins/{checkInId}` | `DELETE` | Delete a specific check-in |
-
-### Request/Response Structures
-
-#### **PUT /habits/{id}/check-ins**
-- **Request Body**:
-  ```json
-  {
-    "date": "2024-05-15",
-    "status": "DONE", // DONE, PARTIAL, SKIPPED
-    "value": 1,
-    "note": "Felt great!"
-  }
-  ```
-- **Response Data**: Returns the updated Habit object with new metrics.
 
 ---
 
@@ -158,20 +73,35 @@ Base Path: `/api`
 | `/exceptions/{id}` | `PUT` | Update an exception's date or reason |
 | `/exceptions/{id}` | `DELETE` | Delete an exception |
 
-### Request/Response Structures
+---
 
-#### **POST /habits/{id}/exceptions**
-- **Request Body**:
-  ```json
-  {
-    "date": "2024-05-20",
-    "reason": "Family vacation"
-  }
-  ```
+## 5. Reminders Module
+Base Path: `/api/habits/{habitId}/reminder`
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` | `PUT` | Create or update a reminder for a habit |
+| `/` | `GET` | Get current reminder for a habit |
+| `/` | `DELETE` | Delete the reminder for a habit |
 
 ---
 
-## 5. Dashboard & Badges (Planned)
+## 6. Dashboard Module
+Base Path: `/api/dashboard`
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` | `GET` | Get summary of active habits, badges, and progress |
+| `/due` | `GET` | Get list of habits scheduled for today |
+
+---
+
+## 7. Badges Module
+Base Path: `/api/badges`
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` | `GET` | List all available badges and user's earned status |
 
 ---
 

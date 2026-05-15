@@ -10,6 +10,7 @@ import com.habit.exception.UnauthorizedException;
 import com.habit.repository.CheckInRepository;
 import com.habit.repository.HabitRepository;
 import com.habit.security.SecurityUtils;
+import com.habit.service.BadgeService;
 import com.habit.service.CheckInService;
 import com.habit.service.HabitService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class CheckInServiceImpl implements CheckInService {
     private final CheckInRepository checkInRepository;
     private final HabitRepository habitRepository;
     private final HabitService habitService;
+    private final BadgeService badgeService;
 
     @Override
     @Transactional
@@ -57,6 +59,9 @@ public class CheckInServiceImpl implements CheckInService {
         }
 
         checkInRepository.save(checkIn);
+        
+        // Trigger badge checks
+        badgeService.checkAndAwardBadges(habit.getUser());
         
         return habitService.getHabitById(habitId);
     }
