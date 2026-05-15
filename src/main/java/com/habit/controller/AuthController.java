@@ -7,6 +7,7 @@ import com.habit.dto.response.ApiResponse;
 import com.habit.dto.response.JwtAuthResponse;
 import com.habit.dto.response.UserResponse;
 import com.habit.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,19 +22,19 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<String>> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest registerRequest) {
         String message = authService.register(registerRequest);
         return new ResponseEntity<>(ApiResponse.success(message, null), HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<JwtAuthResponse>> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
         JwtAuthResponse jwtAuthResponse = authService.login(loginRequest);
         return ResponseEntity.ok(ApiResponse.success("Login successful", jwtAuthResponse));
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<JwtAuthResponse>> refreshToken(@RequestBody TokenRefreshRequest request) {
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> refreshToken(@Valid @RequestBody TokenRefreshRequest request) {
         JwtAuthResponse jwtAuthResponse = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", jwtAuthResponse));
     }

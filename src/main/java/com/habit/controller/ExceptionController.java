@@ -4,6 +4,7 @@ import com.habit.dto.request.ExceptionRequest;
 import com.habit.dto.response.ApiResponse;
 import com.habit.entity.HabitException;
 import com.habit.service.ExceptionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ExceptionController {
     @PostMapping("/habits/{habitId}/exceptions")
     public ResponseEntity<ApiResponse<HabitException>> addException(
             @PathVariable Long habitId,
-            @RequestBody ExceptionRequest request) {
+            @Valid @RequestBody ExceptionRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Exception added successfully", exceptionService.addException(habitId, request)));
     }
 
@@ -32,7 +33,7 @@ public class ExceptionController {
     @PutMapping("/exceptions/{exceptionId}")
     public ResponseEntity<ApiResponse<HabitException>> updateException(
             @PathVariable Long exceptionId,
-            @RequestBody ExceptionRequest request) {
+            @Valid @RequestBody ExceptionRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Exception updated successfully", exceptionService.updateException(exceptionId, request)));
     }
 
