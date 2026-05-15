@@ -24,6 +24,7 @@ export interface Habit {
   totalCompletions: number;
   todayStatus: string; // "DONE", "PARTIAL", "SKIPPED", "PENDING"
   lastCheckIn?: string;
+  createdAt: string;
 }
 
 export interface HabitRequest {

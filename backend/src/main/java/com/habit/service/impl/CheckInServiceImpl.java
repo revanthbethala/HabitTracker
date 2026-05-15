@@ -37,8 +37,17 @@ public class CheckInServiceImpl implements CheckInService {
         Habit habit = getOwnedHabit(habitId);
         LocalDate date = request.getDate() != null ? request.getDate() : LocalDate.now();
 
-        if (date.isBefore(LocalDate.now().minusDays(7)) || date.isAfter(LocalDate.now())) {
+        if (date.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Check-in date cannot be in the future.");
+        }
+
+        if (date.isBefore(LocalDate.now().minusDays(7))) {
             throw new IllegalArgumentException("Check-in date must be within the last 7 days.");
+        }
+
+        LocalDate habitCreatedDate = habit.getCreatedAt().toLocalDate();
+        if (date.isBefore(habitCreatedDate)) {
+            throw new IllegalArgumentException("Cannot check in for a date before the habit was created.");
         }
 
         Optional<CheckIn> existing = checkInRepository.findByHabitIdAndCheckInDate(habitId, date);

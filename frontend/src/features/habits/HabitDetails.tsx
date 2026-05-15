@@ -89,7 +89,7 @@ export const HabitDetails: React.FC = () => {
     e.preventDefault();
     if (!reminderTime) return;
     try {
-      await setReminder.mutateAsync({ reminderTime, isEnabled: isReminderEnabled });
+      await setReminder.mutateAsync({ time: reminderTime, enabled: isReminderEnabled });
       toast.success('Reminder saved');
     } catch (error) {
       toast.error('Failed to save reminder');
@@ -118,13 +118,40 @@ export const HabitDetails: React.FC = () => {
     }
   };
 
-  // Generate last 14 days for history list
-  const pastDays = Array.from({ length: 14 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toISOString().split('T')[0];
-  });
+  // Generate last 7 days for history list, filtering by creation date
+const formatDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
 
+  return `${year}-${month}-${day}`;
+};
+
+const today = new Date();
+
+const todayDate = formatDate(today);
+const createdDate = habit.createdAt ? formatDate(new Date(habit.createdAt)) : todayDate;
+
+// Convert only DATE part
+const todayOnly = new Date(todayDate);
+const createdOnly = new Date(createdDate);
+
+const diffInDays = Math.floor(
+  (todayOnly.getTime() - createdOnly.getTime()) /
+    (1000 * 60 * 60 * 24)
+);
+
+// Always include today
+const numberOfDays = Math.min(diffInDays + 1, 7);
+
+const pastDays = Array.from(
+  { length: Math.max(1, numberOfDays) },
+  (_, i) => {
+    const d = new Date(todayOnly);
+    d.setDate(todayOnly.getDate() - i);
+    return formatDate(d);
+  }
+);
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Header */}
@@ -207,7 +234,7 @@ export const HabitDetails: React.FC = () => {
         <div className="lg:col-span-2 space-y-8">
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-lg font-bold font-heading text-[var(--text-h)] mb-4">Recent History (Last 14 days)</h2>
+              <h2 className="text-lg font-bold font-heading text-[var(--text-h)] mb-4">Recent History (Last 07 days)</h2>
               <div className="space-y-3">
                 {pastDays.map(date => {
                   const checkIn = history.find(c => c.checkInDate === date);
@@ -306,8 +333,8 @@ export const HabitDetails: React.FC = () => {
               {reminder ? (
                  <div className="bg-[var(--code-bg)] p-4 rounded-xl border border-[var(--border)] mb-4 flex justify-between items-center">
                    <div>
-                     <p className="font-mono text-xl font-bold">{reminder.reminderTime}</p>
-                     <p className="text-xs text-[var(--text)]">{reminder.isEnabled ? 'Enabled' : 'Disabled'}</p>
+                     <p className="font-mono text-xl font-bold">{reminder.time}</p>
+                     <p className="text-xs text-[var(--text)]">{reminder.enabled ? 'Enabled' : 'Disabled'}</p>
                    </div>
                    <Button variant="danger" size="icon" onClick={handleDeleteReminder}><Trash2 size={16}/></Button>
                  </div>

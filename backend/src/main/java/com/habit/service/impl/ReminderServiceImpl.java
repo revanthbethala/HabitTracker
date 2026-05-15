@@ -38,8 +38,7 @@ public class ReminderServiceImpl implements ReminderService {
     @Override
     public Reminder getReminderByHabit(Long habitId) {
         getOwnedHabit(habitId); // Access check
-        return reminderRepository.findByHabitId(habitId)
-                .orElseThrow(() -> new ResourceNotFoundException("No reminder set for habit: " + habitId));
+        return reminderRepository.findByHabitId(habitId).orElse(null);
     }
 
     @Override

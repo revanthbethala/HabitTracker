@@ -165,6 +165,7 @@ public class HabitServiceImpl implements HabitService {
                 .totalCompletions(totalCompletions)
                 .todayStatus(todayCheckIn.map(c -> c.getStatus().name()).orElse("PENDING"))
                 .lastCheckIn(lastCheckIn)
+                .createdAt(habit.getCreatedAt())
                 .build();
     }
 

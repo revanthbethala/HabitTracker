@@ -37,4 +37,5 @@ public class HabitResponse {
     private Integer totalCompletions;
     private String todayStatus; 
     private LocalDate lastCheckIn;
+    private java.time.LocalDateTime createdAt;
 }
