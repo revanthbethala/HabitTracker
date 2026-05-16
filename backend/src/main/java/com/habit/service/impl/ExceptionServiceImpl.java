@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -27,6 +28,7 @@ public class ExceptionServiceImpl implements ExceptionService {
     @Transactional
     public HabitException addException(Long habitId, ExceptionRequest request) {
         Habit habit = getOwnedHabit(habitId);
+        validateExceptionDate(habit, request.getDate());
         
         HabitException exception = HabitException.builder()
                 .habit(habit)
@@ -54,7 +56,10 @@ public class ExceptionServiceImpl implements ExceptionService {
             throw new UnauthorizedException("You do not have permission to modify this exception");
         }
 
-        if (request.getDate() != null) exception.setExceptionDate(request.getDate());
+        if (request.getDate() != null) {
+            validateExceptionDate(exception.getHabit(), request.getDate());
+            exception.setExceptionDate(request.getDate());
+        }
         if (request.getReason() != null) exception.setReason(request.getReason());
 
         return exceptionRepository.save(exception);
@@ -83,5 +88,20 @@ public class ExceptionServiceImpl implements ExceptionService {
             throw new UnauthorizedException("You do not have permission to access this habit");
         }
         return habit;
+    }
+
+    private void validateExceptionDate(Habit habit, LocalDate date) {
+        if (date == null) {
+            throw new IllegalArgumentException("Exception date is required");
+        }
+        if (date.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Exception date cannot be in the past");
+        }
+        if (habit.getStartDate() != null && date.isBefore(habit.getStartDate())) {
+            throw new IllegalArgumentException("Exception date cannot be before the habit start date");
+        }
+        if (habit.getEndDate() != null && date.isAfter(habit.getEndDate())) {
+            throw new IllegalArgumentException("Exception date cannot be after the habit end date");
+        }
     }
 }

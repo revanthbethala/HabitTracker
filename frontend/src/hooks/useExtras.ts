@@ -19,6 +19,7 @@ export const useExceptionMutations = (habitId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exceptions', habitId] });
       queryClient.invalidateQueries({ queryKey: ['habit', habitId] });
+      queryClient.invalidateQueries({ queryKey: ['habit-history', habitId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -28,6 +29,7 @@ export const useExceptionMutations = (habitId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exceptions', habitId] });
       queryClient.invalidateQueries({ queryKey: ['habit', habitId] });
+      queryClient.invalidateQueries({ queryKey: ['habit-history', habitId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

@@ -353,21 +353,23 @@ public class HabitServiceImpl implements HabitService {
             builder.expected(isExpected);
             builder.exception(isException);
 
-            if (isException) {
+            if (checkIn != null) {
+                builder.status(HabitHistoryStatus.valueOf(checkIn.getStatus().name()));
+                builder.checkInId(checkIn.getId());
+                builder.value(
+                    checkIn.getValue() != null
+                        ? checkIn.getValue().doubleValue()
+                        : null
+                );
+                builder.note(checkIn.getNote());
+                if (isException) {
+                    builder.exceptionReason(exceptionMap.get(current).getReason());
+                }
+            } else if (isException) {
                 builder.status(HabitHistoryStatus.EXCEPTION);
                 builder.exceptionReason(exceptionMap.get(current).getReason());
             } else if (isExpected) {
-                if (checkIn != null) {
-                    builder.status(HabitHistoryStatus.valueOf(checkIn.getStatus().name()));
-                    builder.checkInId(checkIn.getId());
-builder.value(
-    checkIn.getValue() != null
-        ? checkIn.getValue().doubleValue()
-        : null
-);                    builder.note(checkIn.getNote());
-                } else {
-                    builder.status(HabitHistoryStatus.PENDING);
-                }
+                builder.status(HabitHistoryStatus.PENDING);
             } else {
                 builder.status(HabitHistoryStatus.NOT_EXPECTED);
             }

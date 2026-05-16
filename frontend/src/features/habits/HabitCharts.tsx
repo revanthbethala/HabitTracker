@@ -2,9 +2,7 @@ import React from 'react';
 import { useHabitHistory } from '@/hooks/useExtras';
 import { Card, CardContent } from '@/components/ui/Card';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
-} from 'recharts';
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { motion } from 'framer-motion';
 
 interface HabitChartsProps {
@@ -35,9 +33,9 @@ export const HabitCharts: React.FC<HabitChartsProps> = ({ habitId }) => {
       case 'PARTIAL': return 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]';
       case 'SKIPPED': return 'bg-rose-500/40 border border-rose-500/20';
       case 'EXCEPTION': return 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]';
-      case 'PENDING': return 'bg-[var(--border)] opacity-40';
-      case 'NOT_EXPECTED': return 'bg-[var(--code-bg)] opacity-10';
-      default: return 'bg-[var(--code-bg)] opacity-5';
+      case 'PENDING': return 'bg-gray-200 dark:bg-gray-700 border border-gray-300/70 dark:border-gray-600';
+      case 'NOT_EXPECTED': return 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+      default: return 'bg-gray-200 dark:bg-gray-700 border border-gray-300/70 dark:border-gray-600';
     }
   };
 
@@ -47,14 +45,14 @@ export const HabitCharts: React.FC<HabitChartsProps> = ({ habitId }) => {
       <Card>
         <CardContent className="p-6">
           <h3 className="text-sm font-bold font-heading text-[var(--text-h)] mb-4 uppercase tracking-wider opacity-70">Last 30 Days Heatmap</h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-10 gap-2 w-fit mx-auto">
             {history.map((day: any, i: number) => (
               <motion.div
                 key={day.date}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: i * 0.01 }}
-                className={`w-4 h-4 rounded-sm ${getStatusColor(day.status)} cursor-help relative group`}
+                className={`w-5 h-5 rounded-sm ${day.status === "NOT_EXPECTED" ? "bg-gray-300  dark:border-gray-700" : getStatusColor(day.status)} cursor-help relative group`}
                 title={`${day.date}: ${day.status}`}
               >
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
@@ -63,7 +61,7 @@ export const HabitCharts: React.FC<HabitChartsProps> = ({ habitId }) => {
               </motion.div>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-4 text-[10px] uppercase font-bold text-[var(--text)] opacity-60">
+          <div className="mt-4 flex items-center gap-4 text-[10px] uppercase font-bold text-[var(--text)]">
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-emerald-500" /> Done</div>
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-amber-400" /> Partial</div>
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-rose-500" /> Skipped</div>

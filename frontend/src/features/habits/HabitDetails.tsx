@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHabit, useHabitMutations, useCheckInMutation, useDeleteCheckInMutation } from '@/hooks/useHabits';
-import { useExceptions, useExceptionMutations, useReminder, useReminderMutations, useCheckInHistory } from '@/hooks/useExtras';
+import { useExceptions, useExceptionMutations, useReminder, useReminderMutations, useCheckInHistory, useHabitHistory } from '@/hooks/useExtras';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CheckInModal } from '@/components/ui/CheckInModal';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { ArrowLeft, Edit, Trash2, Calendar as CalendarIcon, TrendingUp, Activity, PauseCircle, PlayCircle, Clock, ShieldAlert, Check, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ export const HabitDetails: React.FC = () => {
   const { deleteHabit, updateHabit, toggleStatus: statusMutation } = useHabitMutations();
   const [historyPage, setHistoryPage] = useState(0);
   const { data: historyResponse } = useCheckInHistory(habitId, historyPage);
+  const { data: habitHistoryResponse } = useHabitHistory(habitId, 90);
   const { data: exceptionsResponse } = useExceptions(habitId);
   const { data: reminderResponse } = useReminder(habitId);
   
@@ -30,6 +32,7 @@ export const HabitDetails: React.FC = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ dateStr: string; initialData?: any } | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [newExceptionDate, setNewExceptionDate] = useState('');
   const [newExceptionReason, setNewExceptionReason] = useState('');
@@ -50,6 +53,7 @@ export const HabitDetails: React.FC = () => {
   // Backend returns a Page object, so we need to extract the 'content' array
   const historyData = historyResponse?.data as any;
   const history = Array.isArray(historyData) ? historyData : historyData?.content || [];
+  const habitHistory = habitHistoryResponse?.data || [];
   const exceptions = exceptionsResponse?.data || [];
   const reminder = reminderResponse?.data;
 
@@ -63,14 +67,12 @@ export const HabitDetails: React.FC = () => {
   }
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this habit? All history will be lost.')) {
-      try {
-        await deleteHabit.mutateAsync(habitId);
-        toast.success('Habit deleted');
-        navigate('/habits');
-      } catch (error) {
-        toast.error('Failed to delete habit');
-      }
+    try {
+      await deleteHabit.mutateAsync(habitId);
+      toast.success('Habit deleted');
+      navigate('/habits');
+    } catch (error) {
+      toast.error('Failed to delete habit');
     }
   };
 
@@ -240,7 +242,7 @@ const pastDays = Array.from(
             </Button>
           )}
 
-          <Button variant="danger" size="icon" onClick={handleDelete} title="Delete Habit">
+          <Button variant="danger" size="icon" onClick={() => setIsDeleteModalOpen(true)} title="Delete Habit">
             <Trash2 size={16} />
           </Button>
         </div>
@@ -296,12 +298,14 @@ const pastDays = Array.from(
               </h2>
               <div className="space-y-3">
                 {pastDays.map(date => {
-                  const checkIn = history.find(c => c.checkInDate === date);
+                  const historyDay = habitHistory.find((day: any) => day.date === date);
+                  const checkIn = history.find((c: any) => c.checkInDate === date);
                   const isException = exceptions.some(e => e.exceptionDate === date);
                   const isToday = date === todayDate;
+                  const isExpected = Boolean(historyDay?.expected);
                   
-                  let currentStatus = checkIn?.status || 'PENDING';
-                  if (isToday && habit.todayStatus) {
+                  let currentStatus = historyDay?.status || checkIn?.status || 'PENDING';
+                  if (isToday && habit.todayStatus && (isExpected || checkIn)) {
                     currentStatus = habit.todayStatus;
                   }
 
@@ -325,6 +329,10 @@ const pastDays = Array.from(
                     statusLabel = 'Exception';
                     statusColor = 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
                     isFinished = true;
+                  } else if (currentStatus === 'NOT_EXPECTED') {
+                    statusLabel = 'Not Scheduled';
+                    statusColor = 'text-[var(--text)] bg-[var(--code-bg)] border-[var(--border)] opacity-70';
+                    isFinished = true;
                   }
 
                    return (
@@ -339,14 +347,20 @@ const pastDays = Array.from(
                         </div>
                       </div>
                       
-                      {!isFinished && (
+                      {!isFinished && isExpected && !isException && (
                         <div className="flex gap-2">
                            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => handlePastCheckIn(date, 'SKIPPED')}>Skip</Button>
                            <Button size="sm" className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600" onClick={() => handlePastCheckIn(date, 'DONE')}><Check size={14} className="mr-1"/> Done</Button>
                         </div>
                       )}
+
+                      {!isFinished && (!isExpected || isException) && (
+                        <span className="text-xs font-medium text-[var(--text)] opacity-60">
+                          Not scheduled
+                        </span>
+                      )}
                       
-                      {isFinished && currentStatus !== 'PENDING' && (
+                      {isFinished && currentStatus !== 'PENDING' && checkIn && (
                         <div className="flex gap-2">
                            {habit.targetType === 'COUNT' && (
                              <Button size="sm" variant="ghost" className="h-8 text-[var(--text)] opacity-50 hover:opacity-100" onClick={() => {
@@ -405,6 +419,8 @@ const pastDays = Array.from(
                   type="date" 
                   value={newExceptionDate}
                   onChange={(e) => setNewExceptionDate(e.target.value)}
+                  min={todayDate}
+                  max={habit.endDate}
                   required
                 />
                 <Input 
@@ -480,6 +496,17 @@ const pastDays = Array.from(
         targetValue={habit.targetValue}
         unit={habit.unit}
         dateStr={modalConfig?.dateStr || ''}
+      />
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Habit?"
+        message={`Are you sure you want to delete "${habit.name}"? This action cannot be undone and all progress history will be lost forever.`}
+        confirmText="Delete Habit"
+        variant="danger"
+        icon="delete"
       />
     </div>
   );
