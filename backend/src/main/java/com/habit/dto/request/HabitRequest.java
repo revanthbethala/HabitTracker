@@ -22,6 +22,7 @@ public class HabitRequest {
     
     @NotBlank(message = "Habit name is required")
     @Size(max = 100, message = "Habit name must be less than 100 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9\\s\\-_!@#$%^&*()]+$", message = "Name contains invalid characters")
     private String name;
 
     private String description;

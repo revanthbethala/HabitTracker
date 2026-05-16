@@ -84,13 +84,13 @@ export const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        {/* <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center text-center">
             <TrendingUp className="text-emerald-500 mb-2" size={24} />
             <p className="text-sm font-medium text-[var(--text)] mb-1">Completion Rate</p>
             <p className="text-3xl font-bold font-mono text-[var(--text-h)]">{summary?.globalCompletionRate || 0}%</p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center text-center">

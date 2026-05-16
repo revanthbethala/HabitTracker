@@ -10,9 +10,16 @@ import { authService } from '@/api/services/auth';
 import { motion } from 'framer-motion';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .regex(/^[a-zA-Z\s]*$/, 'Name can only contain letters and spaces'),
+  email: z.string()
+    .email('Invalid email address')
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email format'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, 
+      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

@@ -13,17 +13,45 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check } from 'lucide-react';
 
 const habitSchema = z.object({
-  name: z.string().min(1, 'Habit name is required').max(100),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  name: z.string()
+    .min(1, 'Habit name is required')
+    .max(100)
+    .regex(/^[a-zA-Z0-9\s\-_!@#$%^&*()]+$/, 'Name contains invalid characters'),
+  description: z.string().max(500).optional(),
+  category: z.string().max(50).optional(),
   targetType: z.enum(['YES_NO', 'COUNT']),
   targetValue: z.preprocess((val) => (val === "" || val === null || isNaN(val as number) ? undefined : Number(val)), z.number().min(1).optional()).nullable(),
   unit: z.string().optional().nullable(),
   scheduleType: z.enum(['DAILY', 'SPECIFIC_DAYS', 'WEEKLY_COUNT']),
   weekdays: z.array(z.string()).optional().nullable(),
   weeklyTarget: z.preprocess((val) => (val === "" || val === null || isNaN(val as number) ? undefined : Number(val)), z.number().min(1).max(7).optional()).nullable(),
-  startDate: z.string().optional(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
 }).refine(data => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (data.startDate) {
+    const start = new Date(data.startDate);
+    if (start < today) return false;
+  }
+  return true;
+}, { message: "Start date cannot be in the past", path: ["startDate"] })
+.refine(data => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (data.endDate) {
+    const end = new Date(data.endDate);
+    if (end < today) return false;
+  }
+  return true;
+}, { message: "End date cannot be in the past", path: ["endDate"] })
+.refine(data => {
+  if (data.startDate && data.endDate) {
+    return new Date(data.endDate) >= new Date(data.startDate);
+  }
+  return true;
+}, { message: "End date must be after or equal to start date", path: ["endDate"] })
+.refine(data => {
   if (data.targetType === 'COUNT' && !data.targetValue) return false;
   return true;
 }, { message: "Target value is required for Count type", path: ["targetValue"] })
@@ -122,6 +150,12 @@ export const CreateHabit: React.FC = () => {
                 type="date"
                 {...register('startDate')}
                 error={errors.startDate?.message}
+              />
+              <Input
+                label="End Date (Optional)"
+                type="date"
+                {...register('endDate')}
+                error={errors.endDate?.message}
               />
             </div>
           </CardContent>

@@ -73,6 +73,7 @@ export const useCheckInMutation = () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
       queryClient.invalidateQueries({ queryKey: ['habit', variables.habitId] });
       queryClient.invalidateQueries({ queryKey: ['checkin-history', variables.habitId] });
+      queryClient.invalidateQueries({ queryKey: ['habit-history', variables.habitId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -88,6 +89,7 @@ export const useDeleteCheckInMutation = () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
       queryClient.invalidateQueries({ queryKey: ['habit', variables.habitId] });
       queryClient.invalidateQueries({ queryKey: ['checkin-history', variables.habitId] });
+      queryClient.invalidateQueries({ queryKey: ['habit-history', variables.habitId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

@@ -9,7 +9,6 @@ export const checkInService = {
   },
 
   getHistory: async (habitId: number, page: number = 0) => {
-    // We fetch 7 items per page to align with the 7-day view
     const response = await apiClient.get<ApiResponse<any>>(`/habits/${habitId}/check-ins?page=${page}&size=7`);
     return response.data;
   },

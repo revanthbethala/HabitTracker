@@ -40,10 +40,21 @@ public class HabitRequestValidator implements ConstraintValidator<ValidHabitRequ
             }
         }
 
-        // 3. End Date Validation (endDate <= today)
+        // 3. Date Validation
+        LocalDate today = LocalDate.now();
+        
+        if (request.getStartDate() != null && request.getStartDate().isBefore(today)) {
+            addConstraintViolation(context, "Start date cannot be in the past", "startDate");
+            valid = false;
+        }
+
         if (request.getEndDate() != null) {
-            if (request.getEndDate().isAfter(LocalDate.now())) {
-                addConstraintViolation(context, "End date cannot be in the future", "endDate");
+            if (request.getEndDate().isBefore(today)) {
+                addConstraintViolation(context, "End date cannot be in the past", "endDate");
+                valid = false;
+            }
+            if (request.getStartDate() != null && request.getEndDate().isBefore(request.getStartDate())) {
+                addConstraintViolation(context, "End date must be after or equal to start date", "endDate");
                 valid = false;
             }
         }

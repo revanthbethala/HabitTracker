@@ -147,12 +147,12 @@ The system automatically evaluates and awards the following badges:
 ---
 
 ## 10. How AI Tools Were Used
-- **AI Assistant**: Antigravity (powered by Gemini 3 Flash).
+- **AI Assistant**: Antigravity,Codex.
 - **Assistance Scope**: 
   - Boilerplate generation for JPA entities and DTOs.
   - Assistance with complex streak calculation logic in the backend.
   - UI styling suggestions and Framer Motion animation configurations.
-  - Documentation generation (including this README).
+  - Documentation generation.
 - **Verification**: All AI-generated code was manually reviewed, debugged, and tested against local SQL Server and browser environments. Corrections were made to streak reset logic and date handling.
 
 ---

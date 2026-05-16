@@ -14,12 +14,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { useDashboard } from '@/hooks/useMetrics';
 
 export const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { data: dashboard } = useDashboard();
 
   const navigation = [
@@ -121,10 +123,7 @@ export const MainLayout: React.FC = () => {
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                onClick={() => {
-                  logout();
-                  closeMobileMenu();
-                }}
+                onClick={() => setIsLogoutModalOpen(true)}
               >
                 <LogOut size={18} className="mr-2" />
                 Sign Out
@@ -151,6 +150,20 @@ export const MainLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      <ConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => {
+          logout();
+          closeMobileMenu();
+        }}
+        title="Sign Out?"
+        message="Are you sure you want to sign out of your account? You will need to login again to access your habits."
+        confirmText="Sign Out"
+        variant="primary"
+        icon="logout"
+      />
     </div>
   );
 };

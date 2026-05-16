@@ -50,7 +50,7 @@ export const LandingPage: React.FC = () => {
         >
           <h1 className="text-5xl md:text-7xl font-bold font-heading text-[var(--text-h)] tracking-tight mb-6 leading-tight">
             Master your routine. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] to-emerald-500">
+            <span className="text-blue-500">
               Build your future.
             </span>
           </h1>

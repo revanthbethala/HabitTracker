@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity } from 'lucide-react';
+import { Activity, ChartNoAxesCombined } from 'lucide-react';
 
 export const AuthLayout: React.FC = () => {
   return (
@@ -19,7 +19,7 @@ export const AuthLayout: React.FC = () => {
           className="z-10 max-w-md text-center"
         >
           <div className="flex justify-center items-center mb-6 text-[var(--accent)]">
-            <Activity size={64} strokeWidth={1.5} />
+            <ChartNoAxesCombined size={64} strokeWidth={1.5} />
           </div>
           <h1 className="text-4xl font-bold mb-4">Master Your Routine</h1>
           <p className="text-lg text-[var(--text)] mb-8">
